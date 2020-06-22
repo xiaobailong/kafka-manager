@@ -1,5 +1,4 @@
 FROM debian:buster
-MAINTAINER kev <noreply@easypi.pro>
 
 ENV SCALA_VERSION 2.12.10
 ENV SBT_VERSION 1.3.8
@@ -31,5 +30,3 @@ EXPOSE 9000
 
 ENTRYPOINT ["bin/cmak"]
 CMD ["-Dconfig.file=conf/application.conf", "-Dhttp.port=9000", "-Dpidfile.path=/dev/null"]
-
-HEALTHCHECK CMD curl -f http://127.0.0.1/api/health || exit 1
