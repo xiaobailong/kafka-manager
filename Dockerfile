@@ -1,21 +1,35 @@
-FROM xiaobailong/oracle-java:centos7_oracleJDK8 AS build
+FROM debian:buster
+MAINTAINER kev <noreply@easypi.pro>
 
-ENV KAFKA_MANAGER_VERSION=3.0.0.5
+ENV SCALA_VERSION 2.12.10
+ENV SBT_VERSION 1.3.8
+ENV CMAK_VERSION 3.0.0.5
 
-#https://github.com/yahoo/kafka-manager/archive/3.0.0.5.tar.gz
-RUN wget "https://github.com/yahoo/kafka-manager/archive/${KAFKA_MANAGER_VERSION}.tar.gz"
-RUN yum makecache fast && yum update -y && yum install -y unzip
-RUN tar -xvf ${KAFKA_MANAGER_VERSION}.tar.gz \
-    && cd CMAK-${KAFKA_MANAGER_VERSION} \
-    && echo 'scalacOptions ++= Seq("-Xmax-classfile-name", "200")' >> build.sbt \
-    && ./sbt clean dist \
-    && unzip -d ./builded ./target/universal/CMAK-${KAFKA_MANAGER_VERSION}.zip \
-    && mv -T ./builded/CMAK-${KAFKA_MANAGER_VERSION} /opt/kafka-manager
+RUN set -xe \
+    && apt update \
+    && apt install -y openjdk-11-jre-headless curl wget \
+    && wget -q https://downloads.lightbend.com/scala/$SCALA_VERSION/scala-$SCALA_VERSION.deb -O scala.deb \
+    && wget -q https://dl.bintray.com/sbt/debian/sbt-$SBT_VERSION.deb -O sbt.deb \
+    && dpkg -i scala.deb sbt.deb \
+    && rm scala.deb sbt.deb \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM xiaobailong/oracle-java:centos7_oracleJDK8
+WORKDIR /opt/cmak
 
-COPY --from=build /opt/kafka-manager /opt/kafka-manager
-WORKDIR /opt/kafka-manager
+RUN set -xe \
+    && mkdir src \
+    && curl -sSL https://github.com/yahoo/CMAK/archive/$CMAK_VERSION.tar.gz | tar xz --strip 1 -C src \
+    && cd src \
+    && sbt clean universal:packageZipTarball \
+    && cd .. \
+    && tar xzf src/target/universal/cmak-$CMAK_VERSION.tgz --strip 1 \
+    && rm -rf src
+
+VOLUME /opt/cmak/conf
 
 EXPOSE 9000
-ENTRYPOINT ["./bin/kafka-manager","-Dconfig.file=conf/application.conf"]
+
+ENTRYPOINT ["bin/cmak"]
+CMD ["-Dconfig.file=conf/application.conf", "-Dhttp.port=9000", "-Dpidfile.path=/dev/null"]
+
+HEALTHCHECK CMD curl -f http://127.0.0.1/api/health || exit 1
