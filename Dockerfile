@@ -1,8 +1,8 @@
 FROM xiaobailong/oracle-java:centos7_oracleJDK8 AS build
 
-ENV KAFKA_MANAGER_VERSION=2.0.0.2
+ENV KAFKA_MANAGER_VERSION=3.0.0.5
 
-#https://github.com/yahoo/kafka-manager/archive/2.0.0.2.tar.gz
+#https://github.com/yahoo/kafka-manager/archive/3.0.0.5.tar.gz
 RUN wget "https://github.com/yahoo/kafka-manager/archive/${KAFKA_MANAGER_VERSION}.tar.gz"
 RUN yum makecache fast && yum update -y && yum install -y unzip
 RUN tar -xvf ${KAFKA_MANAGER_VERSION}.tar.gz \
